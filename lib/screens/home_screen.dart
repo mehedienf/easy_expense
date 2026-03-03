@@ -37,15 +37,16 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoading = true;
     });
 
-    // First load from local storage for offline support
+    // Load local data FIRST — instant, no network needed
     await _loadFromLocal();
 
-    // Then sync with Firebase
-    await _syncWithFirebase();
-
+    // Show UI immediately with local data
     setState(() {
       _isLoading = false;
     });
+
+    // Sync Firebase in background — doesn't block UI
+    _syncWithFirebase();
   }
 
   // Load data from SharedPreferences (user-specific local storage)
