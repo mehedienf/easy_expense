@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "950417547925",
+    "project_id": "easyexpens",
+    "storage_bucket": "easyexpens.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:950417547925:android:646e12775c0be4bc1a719c",
+        "android_client_info": {
+          "package_name": "com.example.expense"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "950417547925-7upfggc6abfl59qclq6uers36llv847n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZrczrVbHsl9-EnU0NnI_K3fBJrmrd6RI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "950417547925-7upfggc6abfl59qclq6uers36llv847n.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
