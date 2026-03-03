@@ -115,17 +115,13 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // App Icon/Logo
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade600,
-                  borderRadius: BorderRadius.circular(60),
-                ),
-                child: const Icon(
-                  Icons.account_balance_wallet,
-                  size: 60,
-                  color: Colors.white,
+              ClipRRect(
+                // borderRadius: BorderRadius.circular(60),
+                child: Image.asset(
+                  'assets/icon/icon.png',
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.cover,
                 ),
               ),
               const SizedBox(height: 32),
@@ -213,8 +209,6 @@ class _LoginScreenState extends State<LoginScreen> {
               Column(
                 children: [
                   _buildFeatureRow(Icons.cloud_sync, 'Automatic cloud backup'),
-                  const SizedBox(height: 8),
-                  _buildFeatureRow(Icons.security, 'Secure data storage'),
                   const SizedBox(height: 8),
                   _buildFeatureRow(Icons.devices, 'Sync across devices'),
                 ],
