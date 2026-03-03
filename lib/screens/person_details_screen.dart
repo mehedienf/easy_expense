@@ -39,8 +39,8 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
             child: Row(
               children: [
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: const Text('Deposit'),
+                  // icon: const Icon(Icons.add),
+                  label: const Text('I Gave'),
                   onPressed: () async {
                     await _showTransactionDialog(
                       context,
@@ -50,8 +50,8 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
                 ),
                 const SizedBox(width: 16),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.remove),
-                  label: const Text('Expense'),
+                  // icon: const Icon(Icons.remove),
+                  label: const Text('I Took'),
                   onPressed: () async {
                     await _showTransactionDialog(
                       context,
@@ -87,7 +87,7 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
                               : Colors.red,
                         ),
                         title: Text(
-                          '${t.type == TransactionType.deposit ? 'Deposit' : 'Expense'}: ${t.amount.toStringAsFixed(2)}',
+                          '${t.type == TransactionType.deposit ? 'I Gave' : 'I Took'}: ${t.amount.toStringAsFixed(2)}',
                         ),
                         subtitle: Text(
                           '${t.note.isNotEmpty ? '${t.note}\n' : ''}${t.date.toLocal().toString().split(' ')[0]}',
@@ -150,9 +150,7 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(
-            type == TransactionType.deposit ? 'Add Deposit' : 'Add Expense',
-          ),
+          title: Text(type == TransactionType.deposit ? 'I Gave' : 'I Took'),
           content: Form(
             key: formKey,
             child: Column(

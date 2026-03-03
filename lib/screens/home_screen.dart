@@ -2,8 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../models/person.dart';
+import '../models/transaction.dart';
 import '../services/auth_service.dart';
 import '../services/sync_service.dart';
+import '../widgets/custom_appBar.dart';
+import '../widgets/custom_bottom_navbar.dart';
 import 'person_details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -24,6 +27,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool get _isOnline => _syncService.isOnline;
   DateTime? get _lastSyncTime => _syncService.lastSyncTime;
+
+  // Calculate total credit (people who owe us money - positive balance)
+  double get _totalCredit {
+    return persons.fold(0.0, (sum, person) {
+      return sum + (person.balance > 0 ? person.balance : 0);
+    });
+  }
+
+  // Calculate total debit (people we owe money - negative balance)
+  double get _totalDebit {
+    return persons.fold(0.0, (sum, person) {
+      return sum + (person.balance < 0 ? person.balance.abs() : 0);
+    });
+  }
+
+  // Calculate net balance
+  double get _netBalance {
+    return persons.fold(0.0, (sum, person) => sum + person.balance);
+  }
 
   @override
   void initState() {
@@ -76,111 +98,62 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.title),
-            Text(
-              'Welcome, ${_auth.currentUser?.displayName ?? 'User'}',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          // Sync status indicator
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else
-            IconButton(
-              icon: Icon(
-                _isOnline ? Icons.cloud_done : Icons.cloud_off,
-                color: _isOnline ? Colors.green : Colors.red,
-              ),
-              onPressed: () async {
-                await _syncWithFirebase();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        _isOnline
-                            ? 'Data synced successfully!'
-                            : 'Sync failed. Working offline.',
-                      ),
-                      backgroundColor: _isOnline ? Colors.green : Colors.red,
-                    ),
-                  );
-                }
-              },
-              tooltip: _isOnline
-                  ? 'Last sync: ${_lastSyncTime != null ? "${_lastSyncTime!.hour}:${_lastSyncTime!.minute.toString().padLeft(2, '0')}" : "Never"}'
-                  : 'Tap to retry sync',
-            ),
-
-          // User profile menu
-          PopupMenuButton<String>(
-            icon: CircleAvatar(
-              radius: 16,
-              backgroundImage: _auth.currentUser?.photoURL != null
-                  ? NetworkImage(_auth.currentUser!.photoURL!)
-                  : null,
-              child: _auth.currentUser?.photoURL == null
-                  ? Text(
-                      (_auth.currentUser?.displayName?.isNotEmpty == true)
-                          ? _auth.currentUser!.displayName!
-                                .substring(0, 1)
-                                .toUpperCase()
-                          : 'U',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
-            ),
-            onSelected: (value) async {
-              if (value == 'profile') {
-                _showUserProfile();
-              } else if (value == 'signout') {
-                await _authService.signOut();
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    const Icon(Icons.person),
-                    const SizedBox(width: 8),
-                    Text(_auth.currentUser?.email ?? ''),
-                  ],
+      appBar: CustomAppBar(
+        title: widget.title,
+        isLoading: _isLoading,
+        isOnline: _isOnline,
+        lastSyncTime: _lastSyncTime,
+        onSyncPressed: () async {
+          await _syncWithFirebase();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  _isOnline
+                      ? 'Data synced successfully!'
+                      : 'Sync failed. Working offline.',
                 ),
+                backgroundColor: _isOnline ? Colors.green : Colors.red,
               ),
-              const PopupMenuItem(
-                value: 'signout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Sign Out', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+            );
+          }
+        },
+        onSignOut: () async {
+          await _authService.signOut();
+        },
+        onProfilePressed: _showUserProfile,
       ),
+
+      bottomNavigationBar: CustomBottomNavbar(
+        currentIndex: 0,
+        onTap: (index) async {
+          // Handle bottom navigation item tap
+          switch (index) {
+            case 0:
+              // Already on Home screen
+              break;
+            case 1:
+              // Add new person
+              final name = await _showAddPersonDialog(context);
+              if (name != null && name.isNotEmpty) {
+                setState(() {
+                  persons.add(Person(name: name));
+                });
+                await _saveData();
+              }
+              break;
+            case 2:
+              // Settings screen logic (not implemented yet)
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Settings coming soon!')),
+                );
+              }
+              break;
+          }
+        },
+      ),
+
       body: Column(
         children: [
           // Offline indicator
@@ -204,6 +177,98 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+
+          // Summary Card
+          Container(
+            margin: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade400, Colors.blue.shade600],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.shade200,
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Header
+                const Text(
+                  'Financial Summary',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Summary Stats
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    // Total Credit
+                    _buildSummaryItem(
+                      icon: Icons.arrow_downward,
+                      label: 'You\'ll Get',
+                      amount: _totalCredit,
+                      color: Colors.greenAccent,
+                    ),
+
+                    // Divider
+                    Container(height: 50, width: 1, color: Colors.white30),
+
+                    // Total Debit
+                    _buildSummaryItem(
+                      icon: Icons.arrow_upward,
+                      label: 'You\'ll Give',
+                      amount: _totalDebit,
+                      color: const Color.fromARGB(255, 234, 143, 38),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+                const Divider(color: Colors.white30, thickness: 1),
+                const SizedBox(height: 8),
+
+                // Net Balance
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.account_balance_wallet,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Net Balance: ',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    Text(
+                      '৳${_netBalance.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        color: _netBalance >= 0
+                            ? Colors.greenAccent
+                            : const Color.fromARGB(255, 234, 143, 38),
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
           // Main content
           Expanded(
             child: RefreshIndicator(
@@ -214,8 +279,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     SnackBar(
                       content: Text(
                         _isOnline
-                            ? '✅ Data synced successfully!'
-                            : '⚠️ Sync failed. Working offline.',
+                            ? 'Data synced successfully!'
+                            : 'Sync failed! Working offline.',
                       ),
                       duration: const Duration(seconds: 2),
                       backgroundColor: _isOnline ? Colors.green : Colors.orange,
@@ -263,9 +328,30 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemBuilder: (context, index) {
                         final person = persons[index];
                         return ListTile(
-                          title: Text(person.name),
-                          subtitle: Text(
-                            'Balance: ${person.balance.toStringAsFixed(2)}',
+                          title: Text(
+                            person.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Balance: ',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: '${person.balance.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade800,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           onTap: () async {
                             await Navigator.of(context).push(
@@ -280,41 +366,108 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             );
                           },
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            tooltip: 'Delete Person',
-                            onPressed: () async {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Delete Person'),
-                                  content: Text(
-                                    'Are you sure you want to delete ${person.name}?',
+                          onLongPress: () async {
+                            // Delete person on long press
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Delete Person'),
+                                content: Text(
+                                  'Are you sure you want to delete ${person.name}?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
+                                    child: const Text('Cancel'),
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.of(context).pop(false),
-                                      child: const Text('Cancel'),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    child: const Text(
+                                      'Delete',
+                                      style: TextStyle(color: Colors.red),
                                     ),
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.of(context).pop(true),
-                                      child: const Text(
-                                        'Delete',
-                                        style: TextStyle(color: Colors.red),
-                                      ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true) {
+                              setState(() {
+                                persons.removeAt(index);
+                              });
+                              await _saveData();
+                            }
+                          },
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 8,
+                            children: [
+                              // I Gave button
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  await _showQuickTransactionDialog(
+                                    context,
+                                    person,
+                                    TransactionType.deposit,
+                                  );
+                                },
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  spacing: 2,
+                                  children: const [
+                                    Icon(
+                                      Icons.arrow_upward,
+                                      color: Colors.green,
+                                      size: 14,
+                                    ),
+                                    Text(
+                                      'Give',
+                                      style: TextStyle(fontSize: 13),
                                     ),
                                   ],
                                 ),
-                              );
-                              if (confirm == true) {
-                                setState(() {
-                                  persons.removeAt(index);
-                                });
-                                await _saveData();
-                              }
-                            },
+                              ),
+                              // I Took button
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 6,
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  await _showQuickTransactionDialog(
+                                    context,
+                                    person,
+                                    TransactionType.expense,
+                                  );
+                                },
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  spacing: 2,
+                                  children: const [
+                                    Icon(
+                                      Icons.arrow_downward,
+                                      color: Colors.red,
+                                      size: 14,
+                                    ),
+                                    Text(
+                                      'Take',
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -363,6 +516,129 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         );
       },
+    );
+  }
+
+  // Quick transaction dialog for home screen
+  Future<void> _showQuickTransactionDialog(
+    BuildContext context,
+    Person person,
+    TransactionType type,
+  ) async {
+    double? amount;
+    String note = '';
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            type == TransactionType.deposit
+                ? 'I Gave to ${person.name}'
+                : 'I Took from ${person.name}',
+          ),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Amount',
+                    prefixText: '৳',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Enter amount';
+                    final v = double.tryParse(value);
+                    if (v == null || v <= 0) return 'Enter valid amount';
+                    return null;
+                  },
+                  onSaved: (value) => amount = double.tryParse(value ?? ''),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Note (optional)',
+                  ),
+                  onChanged: (value) => note = value,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() ?? false) {
+                  formKey.currentState?.save();
+                  if (amount != null) {
+                    setState(() {
+                      person.addTransaction(
+                        Transaction(
+                          amount: amount!,
+                          type: type,
+                          date: DateTime.now(),
+                          note: note,
+                        ),
+                      );
+                    });
+                    _saveData();
+                    Navigator.of(context).pop();
+
+                    // Show success message
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          type == TransactionType.deposit
+                              ? 'Gave ৳${amount!.toStringAsFixed(2)} to ${person.name}'
+                              : 'Took ৳${amount!.toStringAsFixed(2)} from ${person.name}',
+                        ),
+                        backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Build summary item widget
+  Widget _buildSummaryItem({
+    required IconData icon,
+    required String label,
+    required double amount,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '৳${amount.toStringAsFixed(2)}',
+          style: TextStyle(
+            color: color,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 

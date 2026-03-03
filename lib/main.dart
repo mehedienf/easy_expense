@@ -81,13 +81,16 @@ class _SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text("AppBar"),
+      ),
       backgroundColor: Colors.blue.shade50,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(40),
+              // borderRadius: BorderRadius.circular(40),
               child: Image.asset(
                 'assets/icon/icon.png',
                 width: 100,
