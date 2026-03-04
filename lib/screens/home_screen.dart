@@ -183,19 +183,20 @@ class _HomeScreenState extends State<HomeScreen> {
             margin: const EdgeInsets.all(16.0),
             padding: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blue.shade400, Colors.blue.shade600],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: const Color.fromARGB(255, 94, 148, 255),
+              // gradient: LinearGradient(
+              //   colors: [Colors.blue.shade400, Colors.blue.shade600],
+              //   begin: Alignment.topLeft,
+              //   end: Alignment.bottomRight,
+              // ),
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.shade200,
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              // boxShadow: [
+              //   BoxShadow(
+              //     color: Colors.blue.shade200,
+              //     blurRadius: 8,
+              //     offset: const Offset(0, 4),
+              //   ),
+              // ],
             ),
             child: Column(
               children: [
@@ -208,7 +209,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 5),
+
+                // Divider
+                const Divider(
+                  color: Colors.white30,
+                  thickness: 1,
+                  indent: 0,
+                  endIndent: 0,
+                ),
 
                 // Summary Stats
                 Row(
@@ -235,23 +244,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 4),
                 const Divider(color: Colors.white30, thickness: 1),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
 
                 // Net Balance
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
-                      Icons.account_balance_wallet,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
+                    // const Icon(
+                    //   Icons.account_balance_wallet,
+                    //   color: Colors.white,
+                    //   size: 20,
+                    // ),
+                    // const SizedBox(width: 8),
                     const Text(
                       'Net Balance: ',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                      style: TextStyle(
+                        color: Color.fromARGB(225, 255, 255, 255),
+                        fontSize: 18,
+                      ),
                     ),
                     Text(
                       '৳${_netBalance.toStringAsFixed(2)}',
@@ -327,147 +339,172 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemCount: persons.length,
                       itemBuilder: (context, index) {
                         final person = persons[index];
-                        return ListTile(
-                          title: Text(
-                            person.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                        return Container(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
                           ),
-                          subtitle: RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: 'Balance: ',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: '${person.balance.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade800,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(
+                              color: Colors.grey.shade300,
+                              width: 1,
                             ),
-                          ),
-                          onTap: () async {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => PersonDetailsScreen(
-                                  person: person,
-                                  onTransactionAdded: () {
-                                    setState(() {});
-                                  },
-                                  onDataChanged: _saveData,
-                                ),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.05),
+                                blurRadius: 2,
+                                offset: const Offset(0, 1),
                               ),
-                            );
-                          },
-                          onLongPress: () async {
-                            // Delete person on long press
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Delete Person'),
-                                content: Text(
-                                  'Are you sure you want to delete ${person.name}?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(false),
-                                    child: const Text('Cancel'),
+                            ],
+                          ),
+                          
+                          // ListTile with person details
+                          child: ListTile(
+                            title: Text(
+                              person.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: RichText(
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: 'Balance: ',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 14,
+                                    ),
                                   ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(true),
-                                    child: const Text(
-                                      'Delete',
-                                      style: TextStyle(color: Colors.red),
+                                  TextSpan(
+                                    text: person.balance.toStringAsFixed(2),
+                                    style: TextStyle(
+                                      color: Colors.grey.shade800,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ],
                               ),
-                            );
-                            if (confirm == true) {
-                              setState(() {
-                                persons.removeAt(index);
-                              });
-                              await _saveData();
-                            }
-                          },
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: 8,
-                            children: [
-                              // I Gave button
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
+                            ),
+                            onTap: () async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => PersonDetailsScreen(
+                                    person: person,
+                                    onTransactionAdded: () {
+                                      setState(() {});
+                                    },
+                                    onDataChanged: _saveData,
                                   ),
                                 ),
-                                onPressed: () async {
-                                  await _showQuickTransactionDialog(
-                                    context,
-                                    person,
-                                    TransactionType.deposit,
-                                  );
-                                },
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  spacing: 2,
-                                  children: const [
-                                    Icon(
-                                      Icons.arrow_upward,
-                                      color: Colors.green,
-                                      size: 14,
+                              );
+                            },
+                            onLongPress: () async {
+                              // Delete person on long press
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Delete Person'),
+                                  content: Text(
+                                    'Are you sure you want to delete ${person.name}?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(false),
+                                      child: const Text('Cancel'),
                                     ),
-                                    Text(
-                                      'Give',
-                                      style: TextStyle(fontSize: 13),
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
+                                      child: const Text(
+                                        'Delete',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
                                     ),
                                   ],
                                 ),
-                              ),
-                              // I Took button
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 6,
+                              );
+                              if (confirm == true) {
+                                setState(() {
+                                  persons.removeAt(index);
+                                });
+                                await _saveData();
+                              }
+                            },
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: 8,
+                              children: [
+                                // I Gave button
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                  ),
+                                  onPressed: () async {
+                                    await _showQuickTransactionDialog(
+                                      context,
+                                      person,
+                                      TransactionType.deposit,
+                                    );
+                                  },
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    spacing: 2,
+                                    children: const [
+                                      Icon(
+                                        Icons.arrow_upward,
+                                        color: Colors.green,
+                                        size: 14,
+                                      ),
+                                      Text(
+                                        'Give',
+                                        style: TextStyle(fontSize: 13),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                onPressed: () async {
-                                  await _showQuickTransactionDialog(
-                                    context,
-                                    person,
-                                    TransactionType.expense,
-                                  );
-                                },
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  spacing: 2,
-                                  children: const [
-                                    Icon(
-                                      Icons.arrow_downward,
-                                      color: Colors.red,
-                                      size: 14,
+                                // I Took button
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
                                     ),
-                                    Text(
-                                      'Take',
-                                      style: TextStyle(fontSize: 13),
-                                    ),
-                                  ],
+                                  ),
+                                  onPressed: () async {
+                                    await _showQuickTransactionDialog(
+                                      context,
+                                      person,
+                                      TransactionType.expense,
+                                    );
+                                  },
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    spacing: 2,
+                                    children: const [
+                                      Icon(
+                                        Icons.arrow_downward,
+                                        color: Colors.red,
+                                        size: 14,
+                                      ),
+                                      Text(
+                                        'Take',
+                                        style: TextStyle(fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -477,6 +514,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: Color.fromARGB(255, 148, 203, 255),
+        elevation: 2,
         onPressed: () async {
           final name = await _showAddPersonDialog(context);
           if (name != null && name.isNotEmpty) {
@@ -624,10 +663,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       children: [
         Icon(icon, color: color, size: 24),
-        const SizedBox(height: 8),
+        const SizedBox(height: 5),
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: const TextStyle(
+            color: Color.fromARGB(225, 255, 255, 255),
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
