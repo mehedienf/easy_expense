@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/person.dart';
@@ -281,7 +281,7 @@ class SyncService {
     return 'Not synced';
   }
 
-  // Check connectivity using DNS lookup (fast & reliable)
+  // Check connectivity - web-compatible version
   Future<bool> checkConnectivity() async {
     if (!isSignedIn) {
       isOnline = false;
@@ -289,17 +289,40 @@ class SyncService {
     }
 
     try {
-      // DNS lookup is fast & reliable for checking internet access
-      final result = await InternetAddress.lookup(
-        'firestore.googleapis.com',
-      ).timeout(const Duration(seconds: 2));
-      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+      if (kIsWeb) {
+        // For web: Try a quick Firestore read to check connectivity
+        final doc = await _firestore
+            .collection('users')
+            .doc(userId!)
+            .get(const GetOptions(source: Source.server))
+            .timeout(
+              const Duration(seconds: 3),
+              onTimeout: () {
+                throw Exception('Connection timeout');
+              },
+            );
+
+        // If we got server data (not from cache), we're online
+        if (!doc.metadata.isFromCache) {
+          isOnline = true;
+          lastSyncTime = DateTime.now();
+          return true;
+        }
+        isOnline = false;
+        return false;
+      } else {
+        // For mobile/desktop: Use a lightweight Firestore query
+        // We just check if we can reach Firestore servers
+        await _firestore
+            .collection('users')
+            .doc(userId!)
+            .get(const GetOptions(source: Source.server))
+            .timeout(const Duration(seconds: 2));
+
         isOnline = true;
         lastSyncTime = DateTime.now();
         return true;
       }
-      isOnline = false;
-      return false;
     } catch (e) {
       isOnline = false;
       return false;

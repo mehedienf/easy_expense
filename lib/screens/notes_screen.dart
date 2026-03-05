@@ -116,6 +116,39 @@ class _NotesScreenBodyState extends State<NotesScreenBody> {
     unawaited(_syncService.checkConnectivity());
   }
 
+  // Format date/time for display
+  String _formatDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final noteDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
+
+    final time =
+        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+
+    if (noteDate == today) {
+      return 'Today, $time';
+    } else if (noteDate == yesterday) {
+      return 'Yesterday, $time';
+    } else {
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${dateTime.day} ${months[dateTime.month - 1]} ${dateTime.year}, $time';
+    }
+  }
+
   Future<void> _loadNotes() async {
     // Always show local data immediately when Notes tab opens
     final localNotes = await _noteService.loadFromLocal();
@@ -219,12 +252,36 @@ class _NotesScreenBodyState extends State<NotesScreenBody> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      subtitle: Text(
-                        note.content.isEmpty
-                            ? _appSettings.get('noContent')
-                            : note.content,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatDateTime(note.updatedAt),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          if (note.content.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              note.content,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ] else ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              _appSettings.get('noContent'),
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),

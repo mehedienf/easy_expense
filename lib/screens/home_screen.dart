@@ -599,23 +599,23 @@ class _HomeScreenState extends State<HomeScreen> {
                                           padding: const EdgeInsets.all(0),
                                           margin: const EdgeInsets.symmetric(
                                             horizontal: 12,
-                                            vertical: 2,
+                                            vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            border: Border.all(
-                                              color: Colors.grey.shade300,
-                                              width: 1,
-                                            ),
+                                            color: Color.fromARGB(255, 242, 243, 251),
+                                            // border: Border.all(
+                                            //   color: Colors.grey.shade300,
+                                            //   width: 1,
+                                            // ),
                                             borderRadius: BorderRadius.circular(
                                               10,
                                             ),
                                             boxShadow: [
                                               BoxShadow(
                                                 color: Colors.grey.withValues(
-                                                  alpha: 0.05,
+                                                  alpha: 0.5,
                                                 ),
-                                                blurRadius: 2,
+                                                blurRadius: 1,
                                                 offset: const Offset(0, 1),
                                               ),
                                             ],
