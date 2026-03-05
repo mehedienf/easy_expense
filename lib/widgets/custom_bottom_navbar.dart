@@ -24,15 +24,15 @@ class CustomBottomNavbar extends StatelessWidget
       onTap: onTap,
       items: [
         BottomNavigationBarItem(
-          icon: const Icon(Icons.home_outlined),
+          icon: const Icon(Icons.home),
           label: _appSettings.get('home'),
         ),
         BottomNavigationBarItem(
-          icon: const Icon(Icons.note_outlined),
+          icon: const Icon(Icons.note),
           label: _appSettings.get('notes'),
         ),
         BottomNavigationBarItem(
-          icon: const Icon(Icons.settings_outlined),
+          icon: const Icon(Icons.settings),
           label: _appSettings.get('settings'),
         ),
       ],

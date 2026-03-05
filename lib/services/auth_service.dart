@@ -2,12 +2,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import 'note_service.dart';
 import 'sync_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   final SyncService _syncService = SyncService();
+  final NoteService _noteService = NoteService();
 
   bool _googleInitialized = false;
 
@@ -55,9 +57,27 @@ class AuthService {
   }
 
   // Sign out
-  Future<void> signOut() async {
+  Future<bool> backupBeforeSignOut() async {
+    var personsBackupOk = true;
+    var notesBackupOk = true;
+
     try {
-      await _syncService.backupAndClear();
+      await _syncService.backupLocalData();
+    } catch (_) {
+      personsBackupOk = false;
+    }
+
+    try {
+      await _noteService.backupLocalNotes();
+    } catch (_) {
+      notesBackupOk = false;
+    }
+
+    return personsBackupOk && notesBackupOk;
+  }
+
+  Future<void> completeSignOut() async {
+    try {
       await _googleSignIn.signOut();
       await _auth.signOut();
     } catch (_) {
@@ -69,6 +89,11 @@ class AuthService {
         // Ignore errors during fallback sign out
       }
     }
+  }
+
+  Future<void> signOut() async {
+    await backupBeforeSignOut();
+    await completeSignOut();
   }
 
   // Get user display info

@@ -1,6 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class AppSettings {
+class AppSettings extends ChangeNotifier {
   static const String _languageKey = 'app_language';
   static const String _englishCode = 'en';
   static const String _bengaliCode = 'bn';
@@ -15,22 +16,31 @@ class AppSettings {
 
   Future<void> loadLanguage() async {
     final prefs = await SharedPreferences.getInstance();
-    _currentLanguage = prefs.getString(_languageKey) ?? 'en';
+    final savedLanguage = prefs.getString(_languageKey) ?? 'en';
+    if (_currentLanguage != savedLanguage) {
+      _currentLanguage = savedLanguage;
+      notifyListeners();
+    }
   }
 
   Future<void> setLanguage(String language) async {
     if (language != _englishCode && language != _bengaliCode) {
       return;
     }
+    if (_currentLanguage == language) {
+      return;
+    }
     _currentLanguage = language;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_languageKey, language);
+    notifyListeners();
   }
 
   // Translation strings
   Map<String, Map<String, String>> get translations => {
     'en': {
-      'appName': 'DenaPaona',
+      'appName': 'App Name',
+      'DenaPaona': 'DenaPaona',
       'home': 'Home',
       'notes': 'Notes',
       'settings': 'Settings',
@@ -109,16 +119,23 @@ class AppSettings {
       'googleSignInFailedTryAgain': 'Google Sign In failed. Please try again.',
       'signedInAsGuest': 'Signed in as guest!',
       'anonymousSignInFailed': 'Anonymous sign in failed',
+      'logoutBackupSuccess': 'Backup completed before logout',
+      'logoutBackupFailed':
+          'Could not fully backup data before logout. Local data is kept.',
+        'appDeveloperInfo': 'About App',
+        'developerName': 'Developer',
+        'companyName': 'Company',
       'Gave': 'Gave',
       'Took': 'Took',
     },
     'bn': {
-      'appName': 'দেনাপাওনা',
+      'appName': 'অ্যাপের নাম',
+      'DenaPaona': 'দেনাপাওনা',
       'home': 'হোম',
       'notes': 'নোট',
       'settings': 'সেটিংস',
       'language': 'ভাষা',
-      'english': 'ইংরেজি',
+      'english': 'English',
       'bengali': 'বাংলা',
       'about': 'সম্পর্কে',
       'version': 'সংস্করণ',
@@ -193,6 +210,14 @@ class AppSettings {
           'গুগল সাইন ইন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।',
       'signedInAsGuest': 'গেস্ট হিসেবে সাইন ইন হয়েছে!',
       'anonymousSignInFailed': 'গেস্ট সাইন ইন ব্যর্থ হয়েছে',
+      'logoutBackupSuccess': 'লগআউটের আগে ব্যাকআপ সম্পন্ন হয়েছে',
+      'logoutBackupFailed':
+          'লগআউটের আগে সম্পূর্ণ ব্যাকআপ করা যায়নি। লোকাল ডাটা রাখা হয়েছে।',
+        'appDeveloperInfo': 'অ্যাপ সম্পর্কে',
+        'developerName': 'ডেভেলপার',
+        'companyName': 'কোম্পানি',
+      'Gave': 'দিয়েছি',
+      'Took': 'নিয়েছি',
     },
   };
 

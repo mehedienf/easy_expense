@@ -253,13 +253,12 @@ class SyncService {
     }
   }
 
-  // Backup local data before clearing
-  Future<void> backupAndClear() async {
+  // Backup local data to cloud without clearing local cache
+  Future<void> backupLocalData() async {
     final persons = await loadFromLocal();
     if (persons.isNotEmpty && isSignedIn) {
       await saveToFirebase(persons);
     }
-    await clearLocalData();
   }
 
   // Get sync status text

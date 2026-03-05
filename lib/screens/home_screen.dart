@@ -193,17 +193,134 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _handleSignOutWithStatus() async {
+    final backupSuccess = await _authService.backupBeforeSignOut();
+    if (!mounted) return;
+
+    final message = backupSuccess
+        ? _appSettings.get('logoutBackupSuccess')
+        : _appSettings.get('logoutBackupFailed');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(milliseconds: 900),
+        backgroundColor: backupSuccess ? Colors.green : Colors.orange,
+      ),
+    );
+
+    await Future.delayed(const Duration(milliseconds: 700));
+    await _authService.completeSignOut();
+  }
+
+  void _showAppDeveloperInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_appSettings.get('appDeveloperInfo')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${_appSettings.get('appName')}: ${_appSettings.get('DenaPaona')}',
+            ),
+            const SizedBox(height: 8),
+            Text('${_appSettings.get('developerName')}: OlivoSoft'),
+            Text('${_appSettings.get('version')}: 1.0.0'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(_appSettings.get('close')),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                color: Theme.of(context).colorScheme.inversePrimary,
+                child: Text(
+                  _appSettings.get('appName'),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.home_outlined),
+                title: Text(_appSettings.get('home')),
+                selected: _currentTabIndex == 0,
+                onTap: () {
+                  setState(() => _currentTabIndex = 0);
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.note_outlined),
+                title: Text(_appSettings.get('notes')),
+                selected: _currentTabIndex == 1,
+                onTap: () {
+                  setState(() => _currentTabIndex = 1);
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: Text(_appSettings.get('settings')),
+                selected: _currentTabIndex == 2,
+                onTap: () {
+                  setState(() => _currentTabIndex = 2);
+                  Navigator.of(context).pop();
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.red),
+                title: Text(
+                  _appSettings.get('logout'),
+                  style: const TextStyle(color: Colors.red),
+                ),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _handleSignOutWithStatus();
+                },
+              ),
+              const Spacer(),
+              const Divider(height: 0),
+              ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: Text(_appSettings.get('appDeveloperInfo')),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _showAppDeveloperInfo();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
       appBar: CustomAppBar(
         title: _appSettings.get('home'),
         isLoading: _isAppBarLoading,
         isOnline: _isOnline,
+        showDrawerButton: true,
         lastSyncTime: _lastSyncTime,
         onSyncPressed: _syncWithFirebase,
         onSignOut: () async {
-          await _authService.signOut();
+          await _handleSignOutWithStatus();
         },
         onProfilePressed: _showUserProfile,
       ),

@@ -226,4 +226,12 @@ class NoteService {
       // Ignore errors during local data cleanup
     }
   }
+
+  // Backup local notes to cloud without clearing local cache
+  Future<void> backupLocalNotes() async {
+    final notes = await loadFromLocal();
+    if (notes.isNotEmpty && isSignedIn) {
+      await saveToFirebase(notes);
+    }
+  }
 }
