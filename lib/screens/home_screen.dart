@@ -247,20 +247,39 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                color: Theme.of(context).colorScheme.inversePrimary,
-                child: Text(
-                  _appSettings.get('appName'),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  // color: Theme.of(context).colorScheme.inversePrimary,
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.asset(
+                          'assets/icon/icon.png',
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          _appSettings.get('DenaPaona'),
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color.fromARGB(65, 0, 0, 0),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
               ListTile(
-                leading: const Icon(Icons.home_outlined),
+                leading: const Icon(Icons.home),
                 title: Text(_appSettings.get('home')),
                 selected: _currentTabIndex == 0,
                 onTap: () {
@@ -269,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.note_outlined),
+                leading: const Icon(Icons.note),
                 title: Text(_appSettings.get('notes')),
                 selected: _currentTabIndex == 1,
                 onTap: () {
@@ -278,7 +297,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.settings_outlined),
+                leading: const Icon(Icons.settings),
                 title: Text(_appSettings.get('settings')),
                 selected: _currentTabIndex == 2,
                 onTap: () {
@@ -316,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: _appSettings.get('home'),
         isLoading: _isAppBarLoading,
         isOnline: _isOnline,
-        showDrawerButton: true,
+        // showDrawerButton: true,
         lastSyncTime: _lastSyncTime,
         onSyncPressed: _syncWithFirebase,
         onSignOut: () async {
@@ -510,6 +529,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
                                         ),
+                                      ),
+                                      SizedBox(width: 8),
+                                      Icon(
+                                        Icons.account_balance_wallet,
+                                        color: Colors.white,
                                       ),
                                     ],
                                   ),

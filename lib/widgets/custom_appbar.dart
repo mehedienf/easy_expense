@@ -7,7 +7,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool isLoading;
   final bool isOnline;
-  final bool showDrawerButton;
+  // final bool showDrawerButton;
   final DateTime? lastSyncTime;
   final VoidCallback onSyncPressed;
   final VoidCallback onSignOut;
@@ -18,7 +18,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.title,
     required this.isLoading,
     required this.isOnline,
-    this.showDrawerButton = false,
+    // this.showDrawerButton = false,
     this.lastSyncTime,
     required this.onSyncPressed,
     required this.onSignOut,
@@ -32,15 +32,16 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     return AppBar(
       backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      leadingWidth: showDrawerButton ? 56 : null,
-      leading: showDrawerButton
-          ? Builder(
-              builder: (context) => IconButton(
-                onPressed: () => Scaffold.of(context).openDrawer(),
-                icon: const Icon(Icons.more_horiz),
-              ),
-            )
-          : null,
+      
+      // leadingWidth: showDrawerButton ? 56 : null,
+      // leading: showDrawerButton
+      //     ? Builder(
+      //         builder: (context) => IconButton(
+      //           onPressed: () => Scaffold.of(context).openDrawer(),
+      //           icon: const Icon(Icons.more_horiz),
+      //         ),
+      //       )
+      //     : null,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

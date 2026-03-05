@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
@@ -50,10 +51,11 @@ class MyApp extends StatelessWidget {
     return AnimatedBuilder(
       animation: appSettings,
       builder: (context, _) => MaterialApp(
-        title: appSettings.get('appName'),
+        title: appSettings.get('DenaPaona'),
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
+          textTheme: GoogleFonts.tiroBanglaTextTheme(),
         ),
         debugShowCheckedModeBanner: false,
         home: FutureBuilder<void>(
@@ -72,7 +74,7 @@ class MyApp extends StatelessWidget {
                   return const _SplashScreen();
                 }
                 if (snapshot.hasData && snapshot.data != null) {
-                  return HomeScreen(title: appSettings.get('appName'));
+                  return HomeScreen(title: appSettings.get('home'));
                 }
                 return const LoginScreen();
               },
@@ -92,8 +94,8 @@ class _SplashScreen extends StatelessWidget {
     final appSettings = AppSettings();
 
     return Scaffold(
-      appBar: AppBar(title: Text(appSettings.get('appName'))),
-      backgroundColor: Colors.blue.shade50,
+      appBar: AppBar(title: Text(appSettings.get('DenaPaona'))),
+      backgroundColor: const Color.fromARGB(225, 207, 215, 221),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -109,7 +111,7 @@ class _SplashScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              appSettings.get('appName'),
+              appSettings.get('DenaPaona'),
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
