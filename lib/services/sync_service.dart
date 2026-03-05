@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +8,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/person.dart';
 
 class SyncService {
+  // Singleton pattern
+  static final SyncService _instance = SyncService._internal();
+  factory SyncService() => _instance;
+  SyncService._internal();
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -30,7 +36,6 @@ class SyncService {
         final List<dynamic> jsonList = jsonDecode(personsData);
         return jsonList.map((json) => Person.fromJson(json)).toList();
       } catch (e) {
-        print('Error loading from local: $e');
         return [];
       }
     }
@@ -46,9 +51,7 @@ class SyncService {
         persons.map((p) => p.toJson()).toList(),
       );
       await prefs.setString('persons_$uid', personsData);
-      print('✅ Saved to local storage');
     } catch (e) {
-      print('❌ Error saving to local: $e');
       rethrow;
     }
   }
@@ -56,12 +59,25 @@ class SyncService {
   // Load data from Firebase
   Future<List<Person>> loadFromFirebase() async {
     if (!isSignedIn) {
-      print('⚠️ User not signed in, skipping Firebase load');
       return [];
     }
 
     try {
-      final doc = await _firestore.collection('users').doc(userId!).get();
+      final doc = await _firestore
+          .collection('users')
+          .doc(userId!)
+          .get()
+          .timeout(
+            const Duration(seconds: 3),
+            onTimeout: () {
+              throw Exception('Connection timeout');
+            },
+          );
+
+      // Update sync time if data came from server
+      if (!doc.metadata.isFromCache) {
+        lastSyncTime = DateTime.now();
+      }
 
       if (doc.exists) {
         final data = doc.data();
@@ -70,21 +86,12 @@ class SyncService {
           final persons = firebaseData
               .map((json) => Person.fromJson(json))
               .toList();
-
-          isOnline = true;
-          lastSyncTime = DateTime.now();
-
-          print('✅ Loaded ${persons.length} persons from Firebase');
           return persons;
         }
       }
 
-      isOnline = true;
-      lastSyncTime = DateTime.now();
       return [];
     } catch (e) {
-      print('❌ Firebase load failed: $e');
-      isOnline = false;
       return [];
     }
   }
@@ -92,25 +99,30 @@ class SyncService {
   // Save data to Firebase
   Future<bool> saveToFirebase(List<Person> persons) async {
     if (!isSignedIn) {
-      print('⚠️ User not signed in, skipping Firebase save');
       return false;
     }
 
     try {
       final jsonList = persons.map((person) => person.toJson()).toList();
-      await _firestore.collection('users').doc(userId!).set({
-        'persons': jsonList,
-        'lastUpdated': FieldValue.serverTimestamp(),
-      });
+      await _firestore
+          .collection('users')
+          .doc(userId!)
+          .set({
+            'persons': jsonList,
+            'lastUpdated': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true))
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              throw Exception('Connection timeout');
+            },
+          );
 
-      isOnline = true;
       lastSyncTime = DateTime.now();
-
-      print('✅ Saved ${persons.length} persons to Firebase');
       return true;
     } catch (e) {
-      print('❌ Failed to save to Firebase: $e');
-      isOnline = false;
+      // Don't change isOnline status on save failure
+      // Online status is determined by checkConnectivity()
       return false;
     }
   }
@@ -136,26 +148,70 @@ class SyncService {
     final localPersons = await loadFromLocal();
 
     if (!isSignedIn) {
-      print('⚠️ Offline mode - using local data');
+      isOnline = false;
       return localPersons;
     }
 
-    // Load from Firebase
+    // If offline (caller should set this via checkConnectivity), return local data
+    if (!isOnline) {
+      return localPersons;
+    }
+
+    // We're online — load from Firebase
     final firebasePersons = await loadFromFirebase();
 
-    // If Firebase has data, use it (server is source of truth)
-    if (firebasePersons.isNotEmpty) {
-      await saveToLocal(firebasePersons);
+    // Merge strategy: Prefer local data over Firebase for conflicts
+    final mergedPersons = _mergePersonData(localPersons, firebasePersons);
+
+    // Save merged data to local
+    await saveToLocal(mergedPersons);
+
+    // Only write to Firebase if data actually changed
+    if (!_listsEqual(mergedPersons, firebasePersons)) {
+      await saveToFirebase(mergedPersons);
+    }
+
+    return mergedPersons;
+  }
+
+  // Check if two person lists are equal (by name)
+  bool _listsEqual(List<Person> a, List<Person> b) {
+    if (a.length != b.length) return false;
+    final namesA = a.map((p) => p.name).toSet();
+    final namesB = b.map((p) => p.name).toSet();
+    return namesA.length == namesB.length && namesA.containsAll(namesB);
+  }
+
+  // Merge local and Firebase data, preferring local for conflicts
+  List<Person> _mergePersonData(
+    List<Person> localPersons,
+    List<Person> firebasePersons,
+  ) {
+    // If local is empty, use Firebase data
+    if (localPersons.isEmpty) {
       return firebasePersons;
     }
 
-    // If Firebase is empty but local has data, upload to Firebase
-    if (localPersons.isNotEmpty) {
-      await saveToFirebase(localPersons);
+    // If Firebase is empty, use local data
+    if (firebasePersons.isEmpty) {
       return localPersons;
     }
 
-    return [];
+    // Create a map of local persons by name for quick lookup
+    final Map<String, Person> personMap = {};
+    for (var person in localPersons) {
+      personMap[person.name] = person;
+    }
+
+    // Add Firebase persons that don't exist in local
+    for (var firebasePerson in firebasePersons) {
+      if (!personMap.containsKey(firebasePerson.name)) {
+        personMap[firebasePerson.name] = firebasePerson;
+      }
+      // If person exists in both, keep local version (has latest offline changes)
+    }
+
+    return personMap.values.toList();
   }
 
   // Real-time listener for Firebase changes
@@ -181,7 +237,6 @@ class SyncService {
           return <Person>[];
         })
         .handleError((error) {
-          print('❌ Stream error: $error');
           isOnline = false;
           return <Person>[];
         });
@@ -193,9 +248,8 @@ class SyncService {
       final prefs = await SharedPreferences.getInstance();
       final uid = userId ?? 'guest';
       await prefs.remove('persons_$uid');
-      print('✅ Local data cleared');
-    } catch (e) {
-      print('❌ Error clearing local data: $e');
+    } catch (_) {
+      // Ignore errors during local data cleanup
     }
   }
 
@@ -226,5 +280,30 @@ class SyncService {
       }
     }
     return 'Not synced';
+  }
+
+  // Check connectivity using DNS lookup (fast & reliable)
+  Future<bool> checkConnectivity() async {
+    if (!isSignedIn) {
+      isOnline = false;
+      return false;
+    }
+
+    try {
+      // DNS lookup is fast & reliable for checking internet access
+      final result = await InternetAddress.lookup(
+        'firestore.googleapis.com',
+      ).timeout(const Duration(seconds: 2));
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        isOnline = true;
+        lastSyncTime = DateTime.now();
+        return true;
+      }
+      isOnline = false;
+      return false;
+    } catch (e) {
+      isOnline = false;
+      return false;
+    }
   }
 }

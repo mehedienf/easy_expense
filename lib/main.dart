@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'EasyExpense',
+      title: 'DenaPaona',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -64,7 +64,7 @@ class MyApp extends StatelessWidget {
                 return const _SplashScreen();
               }
               if (snapshot.hasData && snapshot.data != null) {
-                return const HomeScreen(title: 'EasyExpense');
+                return const HomeScreen(title: 'DenaPaona');
               }
               return const LoginScreen();
             },
@@ -81,9 +81,7 @@ class _SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("AppBar"),
-      ),
+      appBar: AppBar(title: Text("AppBar")),
       backgroundColor: Colors.blue.shade50,
       body: Center(
         child: Column(
@@ -100,7 +98,7 @@ class _SplashScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'EasyExpense',
+              'DenaPaona',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,

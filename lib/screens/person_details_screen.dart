@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/person.dart';
 import '../models/transaction.dart';
+import '../services/app_settings.dart';
 
 class PersonDetailsScreen extends StatefulWidget {
   final Person person;
@@ -20,17 +21,57 @@ class PersonDetailsScreen extends StatefulWidget {
 }
 
 class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
+  final AppSettings _appSettings = AppSettings();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.person.name)),
+      appBar: AppBar(
+        title: Text(widget.person.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete),
+            tooltip: _appSettings.get('deletePerson'),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text(_appSettings.get('deletePerson')),
+                  content: Text(
+                    '${_appSettings.get('deletePersonConfirm')} ${widget.person.name}?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text(_appSettings.get('cancel')),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: Text(
+                        _appSettings.get('delete'),
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                // Return true to indicate person should be deleted
+                if (context.mounted) {
+                  Navigator.of(context).pop(true);
+                }
+              }
+            },
+          ),
+        ],
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
-              'Balance: ${widget.person.balance.toStringAsFixed(2)}',
+              '${_appSettings.get('balance')}: ${widget.person.balance.toStringAsFixed(2)}',
               style: const TextStyle(fontSize: 20),
             ),
           ),
@@ -40,7 +81,7 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
               children: [
                 ElevatedButton.icon(
                   // icon: const Icon(Icons.add),
-                  label: const Text('I Gave'),
+                  label: Text(_appSettings.get('iGave')),
                   onPressed: () async {
                     await _showTransactionDialog(
                       context,
@@ -51,7 +92,7 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
                 const SizedBox(width: 16),
                 ElevatedButton.icon(
                   // icon: const Icon(Icons.remove),
-                  label: const Text('I Took'),
+                  label: Text(_appSettings.get('iTook')),
                   onPressed: () async {
                     await _showTransactionDialog(
                       context,
@@ -65,69 +106,95 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
           const SizedBox(height: 16),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: SizedBox(),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
-              'Transaction History',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              _appSettings.get('transactionHistory'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
           Expanded(
             child: widget.person.transactions.isEmpty
-                ? const Center(child: Text('No transactions yet.'))
+                ? Center(child: Text(_appSettings.get('noTransactionsYet')))
                 : ListView.builder(
                     itemCount: widget.person.transactions.length,
                     itemBuilder: (context, index) {
                       final t = widget.person.transactions[index];
-                      return ListTile(
-                        leading: Icon(
-                          t.type == TransactionType.deposit
-                              ? Icons.arrow_downward
-                              : Icons.arrow_upward,
-                          color: t.type == TransactionType.deposit
-                              ? Colors.green
-                              : Colors.red,
+                      return Container(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
                         ),
-                        title: Text(
-                          '${t.type == TransactionType.deposit ? 'I Gave' : 'I Took'}: ${t.amount.toStringAsFixed(2)}',
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withValues(alpha: 0.2),
+                              spreadRadius: 1,
+                              blurRadius: 3,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
                         ),
-                        subtitle: Text(
-                          '${t.note.isNotEmpty ? '${t.note}\n' : ''}${t.date.toLocal().toString().split(' ')[0]}',
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          tooltip: 'Delete Transaction',
-                          onPressed: () async {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Delete Transaction'),
-                                content: const Text(
-                                  'Are you sure you want to delete this transaction?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(false),
-                                    child: const Text('Cancel'),
+                        child: ListTile(
+                          leading: Icon(
+                            t.type == TransactionType.deposit
+                                ? Icons.arrow_upward
+                                : Icons.arrow_downward,
+                            color: t.type == TransactionType.deposit
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                          title: Text(
+                            '${t.type == TransactionType.deposit ? _appSettings.get('iGave') : _appSettings.get('iTook')}: ${t.amount.toStringAsFixed(2)}',
+                          ),
+                          subtitle: Text(
+                            '${t.note.isNotEmpty ? '${t.note}\n' : ''}${t.date.toLocal().toString().split(' ')[0]}',
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            tooltip: _appSettings.get('deleteTransaction'),
+                            onPressed: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: Text(
+                                    _appSettings.get('deleteTransaction'),
                                   ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(true),
-                                    child: const Text(
-                                      'Delete',
-                                      style: TextStyle(color: Colors.red),
+                                  content: Text(
+                                    _appSettings.get(
+                                      'deleteTransactionConfirm',
                                     ),
                                   ),
-                                ],
-                              ),
-                            );
-                            if (confirm == true) {
-                              setState(() {
-                                widget.person.transactions.removeAt(index);
-                              });
-                              widget.onTransactionAdded();
-                              await widget.onDataChanged();
-                            }
-                          },
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(false),
+                                      child: Text(_appSettings.get('cancel')),
+                                    ),
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
+                                      child: Text(
+                                        _appSettings.get('delete'),
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirm == true) {
+                                setState(() {
+                                  widget.person.transactions.removeAt(index);
+                                });
+                                widget.onTransactionAdded();
+                                await widget.onDataChanged();
+                              }
+                            },
+                          ),
                         ),
                       );
                     },
@@ -150,7 +217,11 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(type == TransactionType.deposit ? 'I Gave' : 'I Took'),
+          title: Text(
+            type == TransactionType.deposit
+                ? _appSettings.get('iGave')
+                : _appSettings.get('iTook'),
+          ),
           content: Form(
             key: formKey,
             child: Column(
@@ -158,18 +229,24 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
               children: [
                 TextFormField(
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Amount'),
+                  decoration: InputDecoration(
+                    labelText: _appSettings.get('amount'),
+                  ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Enter amount';
+                    if (value == null || value.isEmpty) {
+                      return _appSettings.get('enterAmount');
+                    }
                     final v = double.tryParse(value);
-                    if (v == null || v <= 0) return 'Enter valid amount';
+                    if (v == null || v <= 0) {
+                      return _appSettings.get('enterValidAmount');
+                    }
                     return null;
                   },
                   onSaved: (value) => amount = double.tryParse(value ?? ''),
                 ),
                 TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: 'Note (optional)',
+                  decoration: InputDecoration(
+                    labelText: _appSettings.get('noteOptional'),
                   ),
                   onChanged: (value) => note = value,
                 ),
@@ -179,7 +256,7 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text(_appSettings.get('cancel')),
             ),
             TextButton(
               onPressed: () {
@@ -202,7 +279,7 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
                   }
                 }
               },
-              child: const Text('Add'),
+              child: Text(_appSettings.get('add')),
             ),
           ],
         );

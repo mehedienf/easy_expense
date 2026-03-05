@@ -6,12 +6,20 @@ import 'sync_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: kIsWeb
-        ? '950417547925-7upfggc6abfl59qclq6uers36llv847n.apps.googleusercontent.com' // Web client ID (same for now)
-        : null, // Use default for mobile platforms
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   final SyncService _syncService = SyncService();
+
+  bool _googleInitialized = false;
+
+  Future<void> _initGoogleSignIn() async {
+    if (_googleInitialized) return;
+    await _googleSignIn.initialize(
+      clientId: kIsWeb
+          ? '950417547925-7upfggc6abfl59qclq6uers36llv847n.apps.googleusercontent.com'
+          : null,
+    );
+    _googleInitialized = true;
+  }
 
   // Current user
   User? get currentUser => _auth.currentUser;
@@ -22,29 +30,18 @@ class AuthService {
   // Sign in with Google
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      await _initGoogleSignIn();
 
-      if (googleUser == null) {
-        // User cancelled the sign-in
-        return null;
-      }
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
-      // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      // Create a new credential
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Sign in to Firebase with the Google credentials
       return await _auth.signInWithCredential(credential);
     } catch (e) {
-      print('Error signing in with Google: $e');
-      rethrow; // Re-throw to see actual error
+      rethrow;
     }
   }
 
@@ -53,7 +50,6 @@ class AuthService {
     try {
       return await _auth.signInAnonymously();
     } catch (e) {
-      print('Error signing in anonymously: $e');
       return null;
     }
   }
@@ -61,21 +57,16 @@ class AuthService {
   // Sign out
   Future<void> signOut() async {
     try {
-      // 🔄 Backup local data to Firebase before sign out
       await _syncService.backupAndClear();
-
       await _googleSignIn.signOut();
       await _auth.signOut();
-
-      print('✅ Signed out successfully');
-    } catch (e) {
-      print('Error signing out: $e');
-      // Still sign out even if backup fails
+    } catch (_) {
+      // If primary sign out fails, try secondary sign out
       try {
         await _googleSignIn.signOut();
         await _auth.signOut();
-      } catch (signOutError) {
-        print('Error in final signOut: $signOutError');
+      } catch (_) {
+        // Ignore errors during fallback sign out
       }
     }
   }

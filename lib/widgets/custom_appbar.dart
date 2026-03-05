@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../services/app_settings.dart';
+
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool isLoading;
@@ -24,6 +26,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    final appSettings = AppSettings();
 
     return AppBar(
       backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -32,7 +35,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         children: [
           Text(title),
           Text(
-            'Welcome, ${user?.displayName ?? 'User'}',
+            '${appSettings.get('welcome')}, ${user?.displayName ?? appSettings.get('user')}',
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
           ),
         ],
@@ -56,8 +59,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             onPressed: onSyncPressed,
             tooltip: isOnline
-                ? 'Last sync: ${lastSyncTime != null ? "${lastSyncTime!.hour}:${lastSyncTime!.minute.toString().padLeft(2, '0')}" : "Never"}'
-                : 'Tap to retry sync',
+                ? '${appSettings.get('lastSync')}: ${lastSyncTime != null ? "${lastSyncTime!.hour}:${lastSyncTime!.minute.toString().padLeft(2, '0')}" : appSettings.get('never')}'
+                : appSettings.get('tapToRetrySync'),
           ),
 
         // User profile menu
@@ -101,13 +104,16 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'signout',
               child: Row(
                 children: [
-                  Icon(Icons.logout, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Sign Out', style: TextStyle(color: Colors.red)),
+                  const Icon(Icons.logout, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Text(
+                    appSettings.get('logout'),
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 ],
               ),
             ),
@@ -123,10 +129,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     User? user,
     DateTime? lastSyncTime,
   ) {
+    final appSettings = AppSettings();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('User Profile'),
+        title: Text(appSettings.get('userProfile')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -149,7 +156,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              user?.displayName ?? 'User',
+              user?.displayName ?? appSettings.get('user'),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -159,7 +166,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Last Sync: ${lastSyncTime != null ? "${lastSyncTime.day}/${lastSyncTime.month} at ${lastSyncTime.hour}:${lastSyncTime.minute.toString().padLeft(2, '0')}" : "Never"}',
+              '${appSettings.get('lastSync')}: ${lastSyncTime != null ? "${lastSyncTime.day}/${lastSyncTime.month} ${lastSyncTime.hour}:${lastSyncTime.minute.toString().padLeft(2, '0')}" : appSettings.get('never')}',
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
@@ -167,7 +174,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: Text(appSettings.get('close')),
           ),
         ],
       ),
