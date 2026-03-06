@@ -14,6 +14,15 @@ class AppSettings extends ChangeNotifier {
 
   String get currentLanguage => _currentLanguage;
 
+  // Access to SharedPreferences
+  Future<SharedPreferences?> get prefs async {
+    try {
+      return await SharedPreferences.getInstance();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> loadLanguage() async {
     final prefs = await SharedPreferences.getInstance();
     final savedLanguage = prefs.getString(_languageKey) ?? 'en';
@@ -79,6 +88,8 @@ class AppSettings extends ChangeNotifier {
       'dataSyncedSuccessfully': 'Data synced successfully!',
       'connectionLostWorkingOffline': 'Connection lost! Working offline.',
       'workingOfflineUsingLocalData': 'Working offline - Using local data',
+      'backgroundSyncEnabled': 'Background sync enabled',
+      'backgroundSyncDisabled': 'Background sync disabled',
       'welcome': 'Welcome',
       'user': 'User',
       'lastSync': 'Last Sync',
@@ -122,9 +133,9 @@ class AppSettings extends ChangeNotifier {
       'logoutBackupSuccess': 'Backup completed before logout',
       'logoutBackupFailed':
           'Could not fully backup data before logout. Local data is kept.',
-        'appDeveloperInfo': 'About App',
-        'developerName': 'Developer',
-        'companyName': 'Company',
+      'appDeveloperInfo': 'About App',
+      'developerName': 'Developer',
+      'companyName': 'Company',
       'Gave': 'Gave',
       'Took': 'Took',
     },
@@ -170,6 +181,8 @@ class AppSettings extends ChangeNotifier {
       'connectionLostWorkingOffline': 'সংযোগ বিচ্ছিন্ন! অফলাইনে চলছে।',
       'workingOfflineUsingLocalData':
           'অফলাইনে চলছে - লোকাল ডাটা ব্যবহার করা হচ্ছে',
+      'backgroundSyncEnabled': 'ব্যাকগ্রাউন্ড সিঙ্ক চালু হয়েছে',
+      'backgroundSyncDisabled': 'ব্যাকগ্রাউন্ড সিঙ্ক বন্ধ হয়েছে',
       'welcome': 'স্বাগতম',
       'user': 'ব্যবহারকারী',
       'lastSync': 'সর্বশেষ সিঙ্ক',
@@ -213,9 +226,9 @@ class AppSettings extends ChangeNotifier {
       'logoutBackupSuccess': 'লগআউটের আগে ব্যাকআপ সম্পন্ন হয়েছে',
       'logoutBackupFailed':
           'লগআউটের আগে সম্পূর্ণ ব্যাকআপ করা যায়নি। লোকাল ডাটা রাখা হয়েছে।',
-        'appDeveloperInfo': 'অ্যাপ সম্পর্কে',
-        'developerName': 'ডেভেলপার',
-        'companyName': 'কোম্পানি',
+      'appDeveloperInfo': 'অ্যাপ সম্পর্কে',
+      'developerName': 'ডেভেলপার',
+      'companyName': 'কোম্পানি',
       'Gave': 'দিয়েছি',
       'Took': 'নিয়েছি',
     },

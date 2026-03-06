@@ -7,6 +7,7 @@ import '../models/person.dart';
 import '../models/transaction.dart';
 import '../services/app_settings.dart';
 import '../services/auth_service.dart';
+import '../services/background_sync_service.dart';
 import '../services/sync_service.dart';
 import '../widgets/custom_appBar.dart';
 import '../widgets/custom_bottom_navbar.dart';
@@ -28,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final AuthService _authService = AuthService();
   final AppSettings _appSettings = AppSettings();
+  final BackgroundSyncService _backgroundSyncService = BackgroundSyncService();
   final SyncService _syncService = SyncService();
   bool _isLoading = false;
   int _activeBackupJobs = 0;
@@ -173,16 +175,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _saveData() async {
     try {
       await _syncService.saveToLocal(persons);
+      await _backgroundSyncService.markPersonsPending();
 
       final personsSnapshot = persons
           .map((person) => Person.fromJson(person.toJson()))
           .toList();
       _setBackupLoading(true);
-      unawaited(
-        _syncService
-            .saveToFirebase(personsSnapshot)
-            .whenComplete(() => _setBackupLoading(false)),
-      );
+      unawaited(_savePersonsToFirebaseWithRetry(personsSnapshot));
       unawaited(_syncService.checkConnectivity());
 
       if (mounted) {
@@ -197,6 +196,34 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _savePersonsToFirebaseWithRetry(
+    List<Person> personsSnapshot,
+  ) async {
+    try {
+      var isSaved = await _syncService.saveToFirebase(personsSnapshot);
+
+      if (!isSaved) {
+        await _syncService.checkConnectivity();
+        if (_syncService.isOnline) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          isSaved = await _syncService.saveToFirebase(personsSnapshot);
+        }
+      }
+
+      if (isSaved) {
+        await _backgroundSyncService.clearPersonsPending();
+      } else {
+        await _backgroundSyncService.scheduleImmediateSync();
+      }
+
+      if (mounted) {
+        setState(() {});
+      }
+    } finally {
+      _setBackupLoading(false);
     }
   }
 
@@ -498,7 +525,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Text(
                                     _appSettings.get('financialSummary'),
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: const Color.fromARGB(244, 244, 242, 242),
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -520,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     label:
                                         '${_appSettings.get('youWillGet')}: ',
                                     amount: _totalCredit,
-                                    color: Colors.greenAccent,
+                                    color: const Color.fromARGB(255, 251, 247, 247),
                                   ),
                                   const SizedBox(height: 8),
                                   // Total Debit
@@ -529,12 +556,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     label:
                                         '${_appSettings.get('youWillGive')}: ',
                                     amount: _totalDebit,
-                                    color: const Color.fromARGB(
-                                      255,
-                                      234,
-                                      143,
-                                      38,
-                                    ),
+                                    color: const Color.fromARGB(255, 251, 247, 247),
                                   ),
 
                                   const SizedBox(height: 4),
@@ -565,7 +587,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         '৳${_netBalance.toStringAsFixed(2)}',
                                         style: TextStyle(
                                           color: _netBalance >= 0
-                                              ? Colors.greenAccent
+                                              ? const Color.fromARGB(255, 94, 245, 74)
                                               : const Color.fromARGB(
                                                   255,
                                                   234,
@@ -680,6 +702,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             title: Text(
                                               person.name,
                                               style: const TextStyle(
+                                                color: Color.fromARGB(178, 4, 4, 37),
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
@@ -700,7 +723,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                         .toStringAsFixed(2),
                                                     style: TextStyle(
                                                       color:
-                                                          Colors.grey.shade800,
+                                                          Color.fromARGB(178, 4, 4, 37),
                                                       fontSize: 14,
                                                       fontWeight:
                                                           FontWeight.bold,
@@ -845,6 +868,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                     );
                                   },
                                 ),
+                          // Spacer so list items aren't obscured by the FAB / bottom navbar
+                          SliverToBoxAdapter(
+                            child: SizedBox(
+                              height:
+                                  MediaQuery.of(context).padding.bottom + 40,
+                            ),
+                          ),
                         ],
                       ),
                     ),

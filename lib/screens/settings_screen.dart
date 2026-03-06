@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/app_settings.dart';
+import '../services/background_sync_service.dart';
 import '../services/sync_service.dart';
 import '../widgets/custom_appBar.dart';
 
@@ -45,12 +47,79 @@ class SettingsScreenBody extends StatefulWidget {
 
 class _SettingsScreenBodyState extends State<SettingsScreenBody> {
   final AppSettings _appSettings = AppSettings();
+  final BackgroundSyncService _bgSyncService = BackgroundSyncService();
   late String _selectedLanguage;
+  bool _backgroundSyncEnabled = true;
+  bool _hasPendingBackup = false;
+  bool _isLoadingSync = false;
 
   @override
   void initState() {
     super.initState();
     _selectedLanguage = _appSettings.currentLanguage;
+    _checkBackgroundSyncStatus();
+  }
+
+  Future<void> _checkBackgroundSyncStatus() async {
+    final enabled = await _bgSyncService.isEnabled();
+    final snapshot = await _bgSyncService.getStatusSnapshot();
+    final hasPendingPersons = snapshot['pendingPersons'] as bool? ?? false;
+    final hasPendingNotes = snapshot['pendingNotes'] as bool? ?? false;
+    if (!mounted) return;
+    setState(() {
+      _backgroundSyncEnabled = enabled;
+      _hasPendingBackup = hasPendingPersons || hasPendingNotes;
+    });
+  }
+
+  Future<void> _toggleBackgroundSync(bool value) async {
+    setState(() {
+      _isLoadingSync = true;
+    });
+
+    if (value) {
+      try {
+        await _bgSyncService.enableBackgroundSync();
+        setState(() {
+          _backgroundSyncEnabled = true;
+        });
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_appSettings.get('backgroundSyncEnabled')),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _checkBackgroundSyncStatus();
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Background sync চালু করতে আগে sign in করুন।'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } else {
+      await _bgSyncService.disableBackgroundSync();
+      setState(() {
+        _backgroundSyncEnabled = false;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_appSettings.get('backgroundSyncDisabled')),
+          backgroundColor: Colors.grey,
+        ),
+      );
+      await _checkBackgroundSyncStatus();
+    }
+
+    setState(() {
+      _isLoadingSync = false;
+    });
   }
 
   @override
@@ -78,13 +147,10 @@ class _SettingsScreenBodyState extends State<SettingsScreenBody> {
                 ),
                 child: Column(
                   children: [
-                    // ignore: deprecated_member_use
                     RadioListTile<String>(
                       title: Text(_appSettings.get('english')),
                       value: 'en',
-                      // ignore: deprecated_member_use
                       groupValue: _selectedLanguage,
-                      // ignore: deprecated_member_use
                       onChanged: (value) async {
                         if (value != null) {
                           await _appSettings.setLanguage(value);
@@ -93,7 +159,6 @@ class _SettingsScreenBodyState extends State<SettingsScreenBody> {
                           });
                           if (!mounted) return;
 
-                          // ignore: use_build_context_synchronously
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(_appSettings.get('language')),
@@ -104,13 +169,10 @@ class _SettingsScreenBodyState extends State<SettingsScreenBody> {
                       },
                     ),
                     Divider(height: 0, color: Colors.grey.shade300),
-                    // ignore: deprecated_member_use
                     RadioListTile<String>(
                       title: Text(_appSettings.get('bengali')),
                       value: 'bn',
-                      // ignore: deprecated_member_use
                       groupValue: _selectedLanguage,
-                      // ignore: deprecated_member_use
                       onChanged: (value) async {
                         if (value != null) {
                           await _appSettings.setLanguage(value);
@@ -119,7 +181,6 @@ class _SettingsScreenBodyState extends State<SettingsScreenBody> {
                           });
                           if (!mounted) return;
 
-                          // ignore: use_build_context_synchronously
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(_appSettings.get('language')),
@@ -136,6 +197,28 @@ class _SettingsScreenBodyState extends State<SettingsScreenBody> {
           ),
         ),
         const Divider(),
+
+        if (!kIsWeb) ...[
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SwitchListTile(
+                title: const Text('Enable Background Sync'),
+                subtitle: Text(
+                  _hasPendingBackup ? 'Backup pending' : 'No pending backup',
+                ),
+                value: _backgroundSyncEnabled,
+                onChanged: _isLoadingSync ? null : _toggleBackgroundSync,
+              ),
+            ),
+          ),
+          const Divider(),
+        ],
+
         // About Section
         Padding(
           padding: const EdgeInsets.all(16.0),

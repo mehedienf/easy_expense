@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/note.dart';
 import '../services/app_settings.dart';
+import '../services/background_sync_service.dart';
 import '../services/note_service.dart';
 import '../services/sync_service.dart';
 import '../widgets/custom_appBar.dart';
@@ -106,6 +107,7 @@ class _NotesScreenBodyState extends State<NotesScreenBody> {
   final NoteService _noteService = NoteService();
   final SyncService _syncService = SyncService();
   final AppSettings _appSettings = AppSettings();
+  final BackgroundSyncService _backgroundSyncService = BackgroundSyncService();
   List<Note> notes = [];
 
   @override
@@ -161,6 +163,7 @@ class _NotesScreenBodyState extends State<NotesScreenBody> {
 
   Future<void> _saveNotes() async {
     await _noteService.saveToLocal(notes);
+    await _backgroundSyncService.markNotesPending();
 
     final notesSnapshot = notes
         .map((note) => Note.fromJson(note.toJson()))
@@ -179,6 +182,12 @@ class _NotesScreenBodyState extends State<NotesScreenBody> {
           await Future.delayed(const Duration(milliseconds: 500));
           isSaved = await _noteService.saveToFirebase(notesSnapshot);
         }
+      }
+
+      if (isSaved) {
+        await _backgroundSyncService.clearNotesPending();
+      } else {
+        await _backgroundSyncService.scheduleImmediateSync();
       }
 
       if (mounted) {
@@ -223,7 +232,12 @@ class _NotesScreenBodyState extends State<NotesScreenBody> {
                 ),
               )
             : ReorderableListView.builder(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.fromLTRB(
+                  8,
+                  8,
+                  8,
+                  MediaQuery.of(context).padding.bottom + 80,
+                ),
                 itemCount: notes.length,
                 onReorder: (oldIndex, newIndex) {
                   setState(() {
@@ -248,7 +262,7 @@ class _NotesScreenBodyState extends State<NotesScreenBody> {
                         note.title.isEmpty
                             ? _appSettings.get('untitled')
                             : note.title,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color.fromARGB(178, 4, 4, 37)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

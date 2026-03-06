@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import 'background_sync_service.dart';
 import 'note_service.dart';
 import 'sync_service.dart';
 
@@ -41,7 +42,19 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
-      return await _auth.signInWithCredential(credential);
+      final userCredential = await _auth.signInWithCredential(credential);
+
+      // Enable background sync for Android after successful sign in
+      if (!kIsWeb) {
+        try {
+          final bgSyncService = BackgroundSyncService();
+          await bgSyncService.enableBackgroundSync();
+        } catch (_) {
+          // Ignore background sync init failures
+        }
+      }
+
+      return userCredential;
     } catch (e) {
       rethrow;
     }
@@ -50,7 +63,15 @@ class AuthService {
   // Anonymous sign in (temporary for testing)
   Future<UserCredential?> signInAnonymously() async {
     try {
-      return await _auth.signInAnonymously();
+      final userCredential = await _auth.signInAnonymously();
+      if (!kIsWeb) {
+        try {
+          await BackgroundSyncService().enableBackgroundSync();
+        } catch (_) {
+          // Ignore background sync init failures
+        }
+      }
+      return userCredential;
     } catch (e) {
       return null;
     }
@@ -77,6 +98,16 @@ class AuthService {
   }
 
   Future<void> completeSignOut() async {
+    // Disable background sync for Android before sign out
+    if (!kIsWeb) {
+      try {
+        final bgSyncService = BackgroundSyncService();
+        await bgSyncService.disableBackgroundSync();
+      } catch (_) {
+        // Ignore background sync cleanup failures
+      }
+    }
+
     try {
       await _googleSignIn.signOut();
       await _auth.signOut();

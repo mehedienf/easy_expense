@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/app_settings.dart';
+import 'services/background_sync_service.dart';
 
 late Future<void> _firebaseInit;
 
@@ -37,6 +38,17 @@ Future<void> _initializeFirebase() async {
     );
   } else {
     await Firebase.initializeApp();
+
+    // Initialize background sync for Android
+    if (!kIsWeb) {
+      try {
+        final bgSyncService = BackgroundSyncService();
+        await bgSyncService.initialize();
+        await bgSyncService.restoreScheduledTasksIfNeeded();
+      } catch (e) {
+        // Silently fail if background sync fails to initialize
+      }
+    }
   }
 }
 
