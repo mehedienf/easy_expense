@@ -209,12 +209,12 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       // Check connectivity first, then sync
       await _syncService.checkConnectivity();
-      
+
       // Show offline banner if not online
       if (!_isOnline) {
         _showOfflineBannerTemporary();
       }
-      
+
       final syncedData = await _syncService.fullSync();
       if (mounted) {
         setState(() {

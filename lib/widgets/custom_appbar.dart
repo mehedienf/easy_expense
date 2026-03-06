@@ -32,7 +32,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     return AppBar(
       backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      
+
       // leadingWidth: showDrawerButton ? 56 : null,
       // leading: showDrawerButton
       //     ? Builder(
