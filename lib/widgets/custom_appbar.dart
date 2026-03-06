@@ -70,9 +70,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               color: isOnline ? Colors.green : Colors.red,
             ),
             onPressed: onSyncPressed,
-            tooltip: isOnline
-                ? '${appSettings.get('lastSync')}: ${lastSyncTime != null ? "${lastSyncTime!.hour}:${lastSyncTime!.minute.toString().padLeft(2, '0')}" : appSettings.get('never')}'
-                : appSettings.get('tapToRetrySync'),
           ),
 
         // User profile menu

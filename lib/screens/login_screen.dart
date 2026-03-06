@@ -165,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // App Title
                   Text(
-                    _appSettings.get('appName'),
+                    _appSettings.get('DenaPaona'),
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.blue.shade800,

@@ -32,6 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
   int _activeBackupJobs = 0;
   int _currentTabIndex = 0;
+  bool _showOfflineBanner = false;
+  Timer? _offlineBannerTimer;
 
   bool get _isOnline => _syncService.isOnline;
   DateTime? get _lastSyncTime => _syncService.lastSyncTime;
@@ -74,6 +76,32 @@ class _HomeScreenState extends State<HomeScreen> {
     _syncWithFirebase();
     // Auto-reconnect logic: Check every 5 seconds
     Future.delayed(const Duration(seconds: 5), _checkAndRetrySync);
+    // Check initial offline status after build
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!_isOnline && mounted) {
+        _showOfflineBannerTemporary();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _offlineBannerTimer?.cancel();
+    super.dispose();
+  }
+
+  void _showOfflineBannerTemporary() {
+    _offlineBannerTimer?.cancel();
+    setState(() {
+      _showOfflineBanner = true;
+    });
+    _offlineBannerTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _showOfflineBanner = false;
+        });
+      }
+    });
   }
 
   // Retry sync logic when network is detected
@@ -86,6 +114,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Update UI if status changed
     if (wasOnline != isNowOnline) {
+      if (!isNowOnline) {
+        _showOfflineBannerTemporary();
+      }
       if (mounted) setState(() {});
 
       // If we just came online, sync data (isOnline already set by checkConnectivity above)
@@ -178,6 +209,12 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       // Check connectivity first, then sync
       await _syncService.checkConnectivity();
+      
+      // Show offline banner if not online
+      if (!_isOnline) {
+        _showOfflineBannerTemporary();
+      }
+      
       final syncedData = await _syncService.fullSync();
       if (mounted) {
         setState(() {
@@ -247,11 +284,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(
           child: Column(
             children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  // color: Theme.of(context).colorScheme.inversePrimary,
-                  child: Row(
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                // color: Theme.of(context).colorScheme.inversePrimary,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -262,22 +301,22 @@ class _HomeScreenState extends State<HomeScreen> {
                           fit: BoxFit.cover,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          _appSettings.get('DenaPaona'),
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Color.fromARGB(65, 0, 0, 0),
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                      const SizedBox(height: 12),
+                      Text(
+                        _appSettings.get('DenaPaona'),
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color.fromARGB(65, 0, 0, 0),
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
                 ),
+              ),
               ListTile(
                 leading: const Icon(Icons.home),
                 title: Text(_appSettings.get('home')),
@@ -371,7 +410,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ? Column(
                 children: [
                   // Offline indicator
-                  if (!_isOnline)
+                  if (!_isOnline && _showOfflineBanner)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(8.0),
@@ -445,6 +484,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               decoration: BoxDecoration(
                                 color: const Color.fromARGB(255, 94, 148, 255),
                                 borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: Column(
                                 children: [
@@ -602,7 +648,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Color.fromARGB(255, 242, 243, 251),
+                                            color: Color.fromARGB(
+                                              255,
+                                              242,
+                                              243,
+                                              251,
+                                            ),
                                             // border: Border.all(
                                             //   color: Colors.grey.shade300,
                                             //   width: 1,
@@ -612,9 +663,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                             ),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.grey.withValues(
-                                                  alpha: 0.5,
-                                                ),
+                                                color: const Color.fromARGB(
+                                                  255,
+                                                  118,
+                                                  117,
+                                                  117,
+                                                ).withValues(alpha: 0.5),
                                                 blurRadius: 1,
                                                 offset: const Offset(0, 1),
                                               ),

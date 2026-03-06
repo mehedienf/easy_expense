@@ -19,9 +19,9 @@ class CustomBottomNavbar extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 120,
+    return SafeArea(
       child: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: currentIndex,
         onTap: onTap,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
