@@ -1,5 +1,9 @@
 # easyexpense
 
+# clean and get dependency
+flutter clean
+flutter pub get
+
 # web release and hosting:
 
 flutter build web --release
