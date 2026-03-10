@@ -77,8 +77,9 @@ class BackgroundSyncService {
 
   String formatStatusText(String rawStatus) {
     if (rawStatus == 'never') return 'Never run';
-    if (rawStatus.startsWith('ok:synced'))
+    if (rawStatus.startsWith('ok:synced')) {
       return 'Last run synced successfully';
+    }
     if (rawStatus.startsWith('ok:nothing-pending')) {
       return 'Last run found nothing pending';
     }
